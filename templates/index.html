@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Rovus</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="row">
+        {% for camera in cameras %}
+            <div class="col-md-6 d-flex justify-content-center {% if loop.last and loop.length is odd %}mx-auto{% endif %}">
+                <div class="card mb-4 shadow-sm mx-1">
+                <div class="card-header text-center py-3">
+                    <h4 class="my-0 font-weight-normal">Feed {{ camera.source_index }}</h4>
+                    <div class="button-container d-flex align-items-center justify-content-between">
+                        <select name="resolution" id="resolution-dropdown-{{ camera.source_index }}" class="form-control form-control-sm">
+                            </select> 
+                        <button onclick="changeResolution({{ camera.source_index }})">Apply</button>
+                        </select>
+                        <div class="d-flex">
+                            <button id="refresh-button-{{ camera.source_index }}" onclick="refreshFeed({{ camera.source_index }})" class="btn btn-primary btn-margin"> 
+                                <i id="refresh-icon-{{ camera.source_index }}" class="fas fa-sync refresh-icon"></i> 
+                            </button>
+                            <button id="power-button-{{ camera.source_index }}" onclick="toggleFeed({{ camera.source_index }})" class="btn power-button btn-danger">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="video-container">
+                        <img id="bg{{ camera.source_index }}" class="video-feed" src="{{ url_for('video_feed_' ~ camera.source_index) }}">
+                    </div>
+                </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
+
+</body>
+</html>
