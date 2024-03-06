@@ -9,7 +9,10 @@
 </head>
 
 <body>
-    <div class="row">
+    <div id="boot-page" style="display: none;"> 
+        {% include 'welcome.html' %}
+    </div>
+    <div class="row" id="main-page">
         {% for camera in cameras %}
             <div class="col-md-6 d-flex justify-content-center {% if loop.last and loop.length is odd %}mx-auto{% endif %}">
                 <div class="card mb-4 shadow-sm mx-1">
@@ -39,8 +42,9 @@
             </div>
         {% endfor %}
     </div>
-
+    
     <script src="{{ url_for('static', filename='index.js') }}"></script>
+    <script src="{{ url_for('static', filename='welcome.js') }}"></script> 
 
 </body>
 </html>

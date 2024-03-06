@@ -1,9 +1,22 @@
-import json
 from flask import Flask, render_template, Response, jsonify, request
-import cv2
 import time
 
 app = Flask(__name__)
+
+@app.route('/get_available_feeds')
+def get_available_feeds():
+    cameras = app.config['cameras']
+    available_feeds = [{'index': cam.source_index} for cam in cameras] 
+    return jsonify(available_feeds) 
+
+@app.route('/select_feeds', methods=['POST'])
+def select_feeds():
+    selected_feeds = request.get_json() 
+    cameras = app.config['cameras']
+
+    app.config['selected_cameras'] = [cam for cam in cameras if cam.source_index in selected_feeds]
+    
+    return jsonify({'status': 'success'})
 
 @app.route('/turn_off_feed/<int:index>', methods=['POST'])
 def turn_off_feed(index):
@@ -18,9 +31,9 @@ def turn_off_feed(index):
 
 @app.route('/')
 def index():
-    cameras = app.config['cameras']
-    resolution = cameras[0].get_resolution() if cameras else (0, 0)
-    return render_template('index.html', num_feeds=len(cameras), cameras=cameras, resolution=resolution)
+    selected_cameras = app.config.get('selected_cameras', [])
+    resolution = selected_cameras[0].get_resolution() if selected_cameras else (0, 0)
+    return render_template('index.html', num_feeds=len(selected_cameras), cameras=selected_cameras, resolution=resolution) 
 
 @app.route('/change_resolution', methods=['GET'])
 def change_resolution():

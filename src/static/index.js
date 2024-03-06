@@ -173,3 +173,17 @@ function changeResolution(cameraIndex) {
     });
 }
 
+
+document.getElementById('main-page').style.display = 'none';
+
+function showBootPage() {
+    document.getElementById('boot-page').style.display = 'block';
+
+}
+
+function showMainPage() {
+    document.getElementById('main-page').style.display = 'block'; 
+    document.getElementById('boot-page').style.display = 'none';
+}
+
+showBootPage(); 
