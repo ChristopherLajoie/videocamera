@@ -1,12 +1,12 @@
-import gi
+import gi, sys
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GObject
+from PyQt5.QtGui import QWindow  
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 
 class VideoWorker(QThread):  # Thread for GStreamer pipeline
-    frameAvailable = pyqtSignal(Gst.Sample) 
+    frameAvailable = pyqtSignal(Gst.Sample, int) 
 
     def __init__(self, pipeline_str):
         super().__init__()
@@ -24,30 +24,33 @@ class VideoWorker(QThread):  # Thread for GStreamer pipeline
             # Handle errors
             pass  
         elif msg.type == Gst.MessageType.ELEMENT:
-            if msg.structure.get_name() == "GstSample": 
-                self.frameAvailable.emit(msg.get_structure().get_sample())
+            if msg.structure.get_name() == 'xvimagesink':
+                video_sink = msg.src
+                xid = video_sink.get_window().get_xid()
+                self.frameAvailable.emit(msg.get_structure().get_sample(), xid)
 
 class VideoWidget(QWidget):
     def __init__(self, worker):
         super().__init__()
 
-        self.image_label = QLabel()  
+        self.image_widget = QWidget()  # A generic QWidget to hold the video
         layout = QVBoxLayout()
-        layout.addWidget(self.image_label)
+        layout.addWidget(self.image_widget)
         self.setLayout(layout)
 
         worker.frameAvailable.connect(self.update_frame)
 
-    def update_frame(self, sample):
-        buf = sample.get_buffer()
-        result, mapinfo = buf.map(Gst.MapFlags.READ)
+    def update_frame(self, sample, xid):
+        if not hasattr(self, 'video_window'):  # Create a QWindow only once
+            QTimer.singleShot(500, lambda: self.embed_video(xid))
+            self.video_window = QWindow.fromWinId(xid)
+            self.container = QWidget.createWindowContainer(self.video_window, self)
+            layout = QVBoxLayout()
+            layout.addWidget(self.container)
+            self.setLayout(layout)
 
-        if result:
-            # Assuming an RGB format"
-            image = QImage(mapinfo.data, mapinfo.size[0], mapinfo.size[1], QImage.Format_RGB888)
-            self.image_label.setPixmap(QPixmap.fromImage(image))
-
-        buf.unmap(mapinfo)
+    def embed_video(self, xid):
+     self.video_window = QWindow.fromWinId(xid)
 
 class MyQtApp(QWidget):
     def __init__(self):
@@ -60,16 +63,15 @@ class MyQtApp(QWidget):
         self.stop_button = QPushButton("Stop")
         self.reset_button = QPushButton("Reset")
 
-        # Layout (Using QHBoxLayout for buttons)
+        # Layout
         controls_layout = QHBoxLayout()
         controls_layout.addWidget(self.play_button)
         controls_layout.addWidget(self.stop_button)
         controls_layout.addWidget(self.reset_button)
 
         main_layout = QVBoxLayout()
-        main_layout.addWidget(self.video_widget)
+        main_layout.addWidget(self.video_widget.image_widget)
         main_layout.addLayout(controls_layout)
-
         self.setLayout(main_layout)
 
         # Signal connections 
@@ -98,8 +100,8 @@ if __name__ == "__main__":
 
     app = QApplication([])
     window = MyQtApp()
-    window.video_widget.worker = video_worker  # Connect worker to widget
+    window.video_widget.worker = video_worker  
     window.show()
 
-    video_worker.start()  # Start the GStreamer thread
-    app.exec_()
+    video_worker.start()  
+    app.exec_() 
