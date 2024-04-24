@@ -4,6 +4,7 @@
 #include <QQuickItem>
 #include <QRunnable>
 #include <gst/gst.h>
+#include <cstdlib> 
 
 class SetPlaying : public QRunnable
 {
@@ -39,23 +40,35 @@ int main(int argc, char *argv[])
 {
   int ret;
 
+  setenv("GST_DEBUG", "qmlglsink:4", 1); // Set environment variable
   gst_init (&argc, &argv);
+
+  gst_debug_set_default_threshold(GST_LEVEL_INFO);  // Set debug level
+  gst_debug_add_log_function(gst_debug_log_default, NULL, NULL); // Add default log function
 
   {
     QGuiApplication app(argc, argv);
 
+    // Modified Pipeline Creation
     GstElement *pipeline = gst_pipeline_new (NULL);
-    GstElement *src = gst_element_factory_make ("videotestsrc", NULL);
+    GstElement *src = gst_element_factory_make ("rtspsrc", "rtspsrc");
+    g_object_set(G_OBJECT(src), "location", "rtsp://192.168.144.25:8554/main.264", NULL);
+    g_object_set(G_OBJECT(src), "latency", 100, NULL); 
+    
+    GstElement *queue = gst_element_factory_make ("queue", NULL);
+    GstElement *decode = gst_element_factory_make ("decodebin", NULL);
+
     GstElement *glupload = gst_element_factory_make ("glupload", NULL);
-    /* the plugin must be loaded before loading the qml file to register the
-     * GstGLVideoItem qml item */
     GstElement *sink = gst_element_factory_make ("qmlglsink", NULL);
 
-    g_assert (src && glupload && sink);
+    g_assert (src && queue && decode && glupload && sink);
 
-    gst_bin_add_many (GST_BIN (pipeline), src, glupload, sink, NULL);
-    gst_element_link_many (src, glupload, sink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), src, queue, decode, glupload, sink, NULL);
+    gst_element_link_many (src, queue, decode, glupload, sink, NULL);
 
+    //GstElement *pipeline = gst_parse_launch("rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=100 ! queue ! decodebin ! qmlglsink", NULL);
+
+    // Assuming 'videoItem' is still the name of the QML element
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
 
@@ -66,7 +79,6 @@ int main(int argc, char *argv[])
     rootObject = static_cast<QQuickWindow *> (engine.rootObjects().first());
     videoItem = rootObject->findChild<QQuickItem *> ("videoItem");
     g_assert (videoItem);
-    g_object_set(sink, "widget", videoItem, NULL);
 
     rootObject->scheduleRenderJob (new SetPlaying (pipeline),
         QQuickWindow::BeforeSynchronizingStage);
