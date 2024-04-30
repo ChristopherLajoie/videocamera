@@ -1,3 +1,0 @@
-/home/chris/videocamera/src/ip_camera/build/CMakeFiles/qml-example.dir
-/home/chris/videocamera/src/ip_camera/build/CMakeFiles/edit_cache.dir
-/home/chris/videocamera/src/ip_camera/build/CMakeFiles/rebuild_cache.dir
